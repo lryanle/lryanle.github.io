@@ -1,53 +1,61 @@
 <!DOCTYPE html>
-<html lang="en" >
-  <head>
-    <meta charset="UTF-8">
-    <title>Ryan Lahlou</title>
-    <link rel="apple-touch-icon" sizes="180x180" href="./favicon/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="./favicon/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="./favicon/favicon-16x16.png">
-    <link rel="manifest" href="./favicon/site.webmanifest">
-    <link rel="preconnect" href="https://fonts.gstatic.com" />
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet"/>
-    <link rel="stylesheet" href="./style.css">
-    
-    <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=G-28WQVGZ0XS"></script>
-    <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+<html lang="en">
 
-      gtag('config', 'G-28WQVGZ0XS');
-    </script>
-  </head>
+<head>
+	<meta charset="UTF-8">
+	<title>Ryan Lahlou</title>
+	<link rel="apple-touch-icon" sizes="180x180" href="./favicon/apple-touch-icon.png">
+	<link rel="icon" type="image/png" sizes="32x32" href="./favicon/favicon-32x32.png">
+	<link rel="icon" type="image/png" sizes="16x16" href="./favicon/favicon-16x16.png">
+	<link rel="preconnect" href="https://fonts.gstatic.com" />
+	<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet" />
+	<link rel="stylesheet" href="./style.css">
 
-  
-  <body>
-    <div id="wrapper">
-      <canvas class="orb-canvas"></canvas>
-      <div class="overlay" id="overlay">
-        <div class="overlay__inner">
+	<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=G-28WQVGZ0XS"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
 
-          <h1 class="overlay__title" id="title">
-            Ryan Lahlou
-          </h1>
+		function gtag() {
+			dataLayer.push(arguments);
+		}
+		gtag('js', new Date());
 
-          <p class="overlay__description" id="para">
-            MHS Valedictorian '21<br>H.BS CSE '24<!--<span class="text-gradient"><b></b></span>-->
-          </p>
+		gtag('config', 'G-28WQVGZ0XS');
+	</script>
+</head>
 
-          <iframe src="./Ryan Lahlou Resume 6-16-2021.pdf" style="min-width: 100%; min-height: 700px"></iframe>
-          <p style="text-align:center; opacity: 0.2;">Updated: 6/23/2021</p>
 
-          </div>
-        </div>
-      </div>
-    </body>
+<body>
+	<div id="wrapper">
+		<canvas class="orb-canvas"></canvas>
+		<div class="overlay" id="overlay">
+			<div class="overlay__inner">
 
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.3/chroma.min.js'></script>
-    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js'></script>
-    <script type="module" src="./script.js"></script>
+				<h1 class="overlay__title" id="title">
+					Ryan Lahlou
+				</h1>
 
-  </body>
+				<p class="overlay__description" id="para">
+					MHS Valedictorian '21<br>H.BS CSE '24
+					<!--<span class="text-gradient"><b></b></span>-->
+				</p>
+
+				<a href="./RyanLahlouCR_03_30_22.pdf"><button class="button">College Resume<span style="text-align:center; opacity: 0.4;"><br>Updated:
+							3/30/2022</span></button></a>
+				<a href="./RyanLahlouHS_03_30_22.pdf"><button class="button">High School Resume<span style="text-align:center; opacity: 0.4;"><br>Updated:
+							6/23/2021</span></button></a>
+				<p></p>
+
+			</div>
+		</div>
+	</div>
+</body>
+
+<script src='https://cdnjs.cloudflare.com/ajax/libs/chroma-js/2.0.3/chroma.min.js'></script>
+<script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js'></script>
+<script type="module" src="./script.js"></script>
+
+</body>
+
 </html>
