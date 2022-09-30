@@ -12,6 +12,7 @@
   --bg-gradient: linear-gradient(to bottom,
       hsl(var(--hue), 95%, 99%),
       hsl(var(--hue), 95%, 84%));
+  background-color: lightskyblue;
 }
 
 html {
