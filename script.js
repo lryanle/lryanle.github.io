@@ -1,227 +1,370 @@
-import * as PIXI from "https://cdn.skypack.dev/pixi.js";
-import { KawaseBlurFilter } from "https://cdn.skypack.dev/@pixi/filter-kawase-blur";
-import SimplexNoise from "https://cdn.skypack.dev/simplex-noise";
-import hsl from "https://cdn.skypack.dev/hsl-to-hex";
-import debounce from "https://cdn.skypack.dev/debounce";
+// Background
+(function () {
 
-// return a random number within a range
-function randomNum(min, max) {
-	return Math.random() * (max - min) + min;
-}
+	var pi = Math.PI;
+	var pi2 = 2 * Math.PI;
 
-// map a number from 1 range to another
-function map(n, start1, end1, start2, end2) {
-	return ((n - start1) / (end1 - start1)) * (end2 - start2) + start2;
-}
+	this.Waves = function (holder, options) {
+		var Waves = this;
 
-// Create a new simplex noise instance
-const simplex = new SimplexNoise();
+		Waves.options = extend(options || {}, {
+			resize: false,
+			rotation: 45,
+			waves: 5,
+			width: 100,
+			hue: [11, 14],
+			amplitude: 0.5,
+			background: true,
+			preload: true,
+			speed: [0.004, 0.008],
+			debug: false,
+			fps: false,
+		});
 
-// ColorPalette class
-class ColorPalette {
-	constructor() {
-		this.setColors();
-		this.setCustomProperties();
-	}
+		Waves.waves = [];
 
-	setColors() {
-		this.hue = ~~randomNum(220, 360);
-		this.complimentaryHue1 = this.hue + 30;
-		this.complimentaryHue2 = this.hue + 60;
-		this.saturation = 95;
-		this.lightness = 50;
+		Waves.holder = document.querySelector(holder);
+		Waves.canvas = document.createElement('canvas');
+		Waves.ctx = Waves.canvas.getContext('2d');
+		Waves.holder.appendChild(Waves.canvas);
 
-		this.baseColor = hsl(this.hue, this.saturation, this.lightness);
-		this.complimentaryColor1 = hsl(
-			this.complimentaryHue1,
-			this.saturation,
-			this.lightness
-		);
+		Waves.hue = Waves.options.hue[0];
+		Waves.hueFw = true;
+		Waves.stats = new Stats();
 
-		this.complimentaryColor2 = hsl(
-			this.complimentaryHue2,
-			this.saturation,
-			this.lightness
-		);
+		Waves.resize();
+		Waves.init(Waves.options.preload);
 
-		this.colorChoices = [
-			this.baseColor,
-			this.complimentaryColor1,
-			this.complimentaryColor2
-		];
-	}
+		if (Waves.options.resize)
+			window.addEventListener('resize', function () {
+				Waves.resize();
+			}, false);
 
-	randomColor() {
-		return this.colorChoices[~~randomNum(0, this.colorChoices.length)].replace(
-			"#",
-			"0x"
-		);
-	}
+	};
 
-	setCustomProperties() {
-		document.documentElement.style.setProperty("--hue", this.hue);
-		document.documentElement.style.setProperty(
-			"--hue-complimentary1",
-			this.complimentaryHue1
-		);
-		document.documentElement.style.setProperty(
-			"--hue-complimentary2",
-			this.complimentaryHue2
-		);
-	}
-}
+	Waves.prototype.init = function (preload) {
+		var Waves = this;
+		var options = Waves.options;
 
-// Orb class
-class Orb {
-	constructor(fill = 0x000000) {
-		this.bounds = this.setBounds();
-		this.x = randomNum(this.bounds["x"].min, this.bounds["x"].max);
-		this.y = randomNum(this.bounds["y"].min, this.bounds["y"].max);
+		for (var i = 0; i < options.waves; i++)
+			Waves.waves[i] = new Wave(Waves);
 
-		this.scale = 1;
+		if (preload) Waves.preload();
+	};
 
-		this.fill = fill;
+	Waves.prototype.preload = function () {
+		var Waves = this;
+		var options = Waves.options;
 
-		this.radius = randomNum(window.innerHeight / 6, window.innerHeight / 3);
-
-		this.xOff = randomNum(0, 1000);
-		this.yOff = randomNum(0, 1000);
-		this.inc = 0.002;
-
-		this.graphics = new PIXI.Graphics();
-		this.graphics.alpha = 0.825;
-
-		window.addEventListener(
-			"resize",
-			debounce(() => {
-				this.bounds = this.setBounds();
-			}, 250)
-		);
-	}
-
-	setBounds() {
-		const maxDist =
-			window.innerWidth < 1000 ? window.innerWidth / 3 : window.innerWidth / 5;
-		const originX = window.innerWidth / 1.25;
-		const originY =
-			window.innerWidth < 1000
-				? window.innerHeight
-				: window.innerHeight / 1.375;
-
-		return {
-			x: {
-				min: originX - maxDist,
-				max: originX + maxDist
-			},
-			y: {
-				min: originY - maxDist,
-				max: originY + maxDist
+		for (var i = 0; i < options.waves; i++) {
+			Waves.updateColor();
+			for (var j = 0; j < options.width; j++) {
+				Waves.waves[i].update();
 			}
-		};
+		}
+	};
+
+	Waves.prototype.render = function () {
+		var Waves = this;
+		var ctx = Waves.ctx;
+		var options = Waves.options;
+
+		Waves.updateColor();
+		Waves.clear();
+
+		if (Waves.options.debug) {
+			ctx.beginPath();
+			ctx.strokeStyle = '#f00';
+			ctx.arc(Waves.centerX, Waves.centerY, Waves.radius, 0, pi2);
+			ctx.stroke();
+		}
+
+		if (Waves.options.background) {
+			Waves.background();
+		}
+
+		each(Waves.waves, function (wave, i) {
+			wave.update();
+			wave.draw();
+		});
+	};
+
+	Waves.prototype.animate = function () {
+		var Waves = this;
+
+		Waves.render();
+
+		if (Waves.options.fps) {
+			Waves.stats.log();
+			Waves.ctx.font = '12px Arial';
+			Waves.ctx.fillStyle = '#fff';
+			Waves.ctx.fillText(Waves.stats.fps() + ' FPS', 10, 22);
+		}
+
+		window.requestAnimationFrame(Waves.animate.bind(Waves));
+	};
+
+	Waves.prototype.clear = function () {
+		var Waves = this;
+		Waves.ctx.clearRect(0, 0, Waves.width, Waves.height);
+	};
+
+	Waves.prototype.background = function () {
+		var Waves = this;
+		var ctx = Waves.ctx;
+
+		var gradient = Waves.ctx.createLinearGradient(0, 0, 0, Waves.height);
+		gradient.addColorStop(0, '#000');
+		gradient.addColorStop(1, Waves.color);
+
+		ctx.fillStyle = gradient;
+		ctx.fillRect(0, 0, Waves.width, Waves.height);
+	};
+
+	Waves.prototype.resize = function () {
+		var Waves = this;
+		var width = Waves.holder.offsetWidth;
+		var height = Waves.holder.offsetHeight;
+		Waves.scale = window.devicePixelRatio || 1;
+		Waves.width = width * Waves.scale;
+		Waves.height = height * Waves.scale;
+		Waves.canvas.width = Waves.width;
+		Waves.canvas.height = Waves.height;
+		Waves.canvas.style.width = 100 + '%';
+		Waves.canvas.style.height = 100 + '%';
+		Waves.radius = Math.sqrt(Math.pow(Waves.width, 2) + Math.pow(Waves.height, 2)) / 2;
+		Waves.centerX = Waves.width / 2;
+		Waves.centerY = Waves.height / 2;
+		//Waves.radius /= 2; // REMOVE FOR FULLSREEN
+	};
+
+	Waves.prototype.updateColor = function () {
+		var Waves = this;
+
+		Waves.hue += (Waves.hueFw) ? 0.01 : -0.01;
+
+		if (Waves.hue > Waves.options.hue[1] && Waves.hueFw) {
+			Waves.hue = Waves.options.hue[1];
+			Waves.Waves = false;
+		} else if (Waves.hue < Waves.options.hue[0] && !Waves.hueFw) {
+			Waves.hue = Waves.options.hue[0];
+			Waves.Waves = true;
+		}
+
+		var a = Math.floor(127 * Math.sin(0.3 * Waves.hue + 0) + 128);
+		var b = Math.floor(127 * Math.sin(0.3 * Waves.hue + 2) + 128);
+		var c = Math.floor(127 * Math.sin(0.3 * Waves.hue + 4) + 128);
+
+		Waves.color = 'rgba(' + a + ',' + b + ',' + c + ', 0.1)';
+	};
+
+	function Wave(Waves) {
+		var Wave = this;
+		var speed = Waves.options.speed;
+
+		Wave.Waves = Waves;
+		Wave.Lines = [];
+
+		Wave.angle = [
+			rnd(pi2),
+			rnd(pi2),
+			rnd(pi2),
+			rnd(pi2)
+		];
+
+		Wave.speed = [
+			rnd(speed[0], speed[1]) * rnd_sign(),
+			rnd(speed[0], speed[1]) * rnd_sign(),
+			rnd(speed[0], speed[1]) * rnd_sign(),
+			rnd(speed[0], speed[1]) * rnd_sign(),
+		];
+
+		return Wave;
 	}
 
-	update() {
-		const xNoise = simplex.noise2D(this.xOff, this.xOff);
-		const yNoise = simplex.noise2D(this.yOff, this.yOff);
-		const scaleNoise = simplex.noise2D(this.xOff, this.yOff);
+	Wave.prototype.update = function () {
+		var Wave = this;
+		var Lines = Wave.Lines;
+		var color = Wave.Waves.color;
 
-		this.x = map(xNoise, -1, 1, this.bounds["x"].min, this.bounds["x"].max);
-		this.y = map(yNoise, -1, 1, this.bounds["y"].min, this.bounds["y"].max);
-		this.scale = map(scaleNoise, -1, 1, 0.5, 1);
+		Lines.push(new Line(Wave, color));
 
-		this.xOff += this.inc;
-		this.yOff += this.inc;
+		if (Lines.length > Wave.Waves.options.width) {
+			Lines.shift();
+		}
+	};
+
+	Wave.prototype.draw = function () {
+		var Wave = this;
+		var Waves = Wave.Waves;
+
+		var ctx = Waves.ctx;
+		var radius = Waves.radius;
+		var radius3 = radius / 3;
+		var x = Waves.centerX;
+		var y = Waves.centerY;
+		var rotation = dtr(Waves.options.rotation);
+		var amplitude = Waves.options.amplitude;
+		var debug = Waves.options.debug;
+
+		var Lines = Wave.Lines;
+
+		each(Lines, function (line, i) {
+			if (debug && i > 0) return;
+
+			var angle = line.angle;
+
+			var x1 = x - radius * Math.cos(angle[0] * amplitude + rotation);
+			var y1 = y - radius * Math.sin(angle[0] * amplitude + rotation);
+			var x2 = x + radius * Math.cos(angle[3] * amplitude + rotation);
+			var y2 = y + radius * Math.sin(angle[3] * amplitude + rotation);
+			var cpx1 = x - radius3 * Math.cos(angle[1] * amplitude * 2);
+			var cpy1 = y - radius3 * Math.sin(angle[1] * amplitude * 2);
+			var cpx2 = x + radius3 * Math.cos(angle[2] * amplitude * 2);
+			var cpy2 = y + radius3 * Math.sin(angle[2] * amplitude * 2);
+
+			ctx.strokeStyle = (debug) ? '#fff' : line.color;
+
+			ctx.beginPath();
+			ctx.moveTo(x1, y1);
+			ctx.bezierCurveTo(cpx1, cpy1, cpx2, cpy2, x2, y2);
+			ctx.stroke();
+
+			if (debug) {
+				ctx.strokeStyle = '#fff';
+				ctx.globalAlpha = 0.3;
+
+				ctx.beginPath();
+				ctx.moveTo(x1, y1);
+				ctx.lineTo(cpx1, cpy1);
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.moveTo(x2, y2);
+				ctx.lineTo(cpx2, cpy2);
+				ctx.stroke();
+
+				ctx.globalAlpha = 1;
+			}
+		});
+	};
+
+	function Line(Wave, color) {
+		var Line = this;
+
+		var angle = Wave.angle;
+		var speed = Wave.speed;
+
+		Line.angle = [
+			Math.sin(angle[0] += speed[0]),
+			Math.sin(angle[1] += speed[1]),
+			Math.sin(angle[2] += speed[2]),
+			Math.sin(angle[3] += speed[3])
+		];
+
+		Line.color = color;
 	}
 
-	render() {
-		this.graphics.x = this.x;
-		this.graphics.y = this.y;
-		this.graphics.scale.set(this.scale);
-
-		this.graphics.clear();
-
-		this.graphics.beginFill(this.fill);
-		this.graphics.drawCircle(0, 0, this.radius);
-		this.graphics.endFill();
+	function Stats() {
+		this.data = [];
 	}
-}
 
-// Create PixiJS app
-const app = new PIXI.Application({
-	view: document.querySelector(".orb-canvas"),
-	resizeTo: window,
-	backgroundAlpha: 0
+	Stats.prototype.time = function () {
+		return (performance || Date)
+			.now();
+	};
+
+	Stats.prototype.log = function () {
+		if (!this.last) {
+			this.last = this.time();
+			return 0;
+		}
+
+		this.new = this.time();
+		this.delta = this.new - this.last;
+		this.last = this.new;
+
+		this.data.push(this.delta);
+		if (this.data.length > 10)
+			this.data.shift();
+	};
+
+	Stats.prototype.fps = function () {
+		var fps = 0;
+		each(this.data, function (data, i) {
+			fps += data;
+		});
+
+		return Math.round(1000 / (fps / this.data.length));
+	};
+
+	function each(items, callback) {
+		for (var i = 0; i < items.length; i++) {
+			callback(items[i], i);
+		}
+	}
+
+	function extend(options, defaults) {
+		for (var key in options)
+			if (defaults.hasOwnProperty(key))
+				defaults[key] = options[key];
+		return defaults;
+	}
+
+	function dtr(deg) {
+		return deg * pi / 180;
+	}
+
+	function rtd(rad) {
+		return rad * 180 / pi;
+	}
+
+	function diagonal_angle(w, h) {
+		var a = Math.atan2(h, w) * 1.27325;
+		return a;
+	}
+
+	function rnd(a, b) {
+		if (arguments.length == 1)
+			return Math.random() * a;
+		return a + Math.random() * (b - a);
+	}
+
+	function rnd_sign() {
+		return (Math.random() > 0.5) ? 1 : -1;
+	}
+
+})();
+
+var waves = new Waves('#background', {
+	waves: 3,
+	width: 300,
 });
 
-// Create colour palette
-const colorPalette = new ColorPalette();
+waves.animate();
 
-app.stage.filters = [new KawaseBlurFilter(30, 10, true)];
+// Button Ripple Effect
+function createRipple(event) {
+	const button = event.currentTarget;
 
-// Create orbs
-const orbs = [];
+	const circle = document.createElement("span");
+	const diameter = Math.max(button.clientWidth, button.clientHeight);
+	const radius = diameter / 2;
 
-for (let i = 0; i < 10; i++) {
-	const orb = new Orb(colorPalette.randomColor());
+	circle.style.width = circle.style.height = `${diameter}px`;
+	circle.style.left = `${event.clientX - button.offsetLeft - radius}px`;
+	circle.style.top = `${event.clientY - button.offsetTop - radius}px`;
+	circle.classList.add("ripple");
 
-	app.stage.addChild(orb.graphics);
+	const ripple = button.getElementsByClassName("ripple")[0];
 
-	orbs.push(orb);
+	if (ripple) {
+		ripple.remove();
+	}
+
+	button.appendChild(circle);
 }
 
-// Animate background
-if (!window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-	app.ticker.add(() => {
-		orbs.forEach((orb) => {
-			orb.update();
-			orb.render();
-		});
-	});
-} else {
-	orbs.forEach((orb) => {
-		orb.update();
-		orb.render();
-	});
-}
-
-// Randomize Color
-document
-	.querySelector(".overlay__title")
-	.addEventListener("click", () => {
-		colorPalette.setColors();
-		colorPalette.setCustomProperties();
-
-		orbs.forEach((orb) => {
-			orb.fill = colorPalette.randomColor();
-		});
-	});
-
-document
-	.querySelector(".button")
-	.addEventListener("click", () => {
-		colorPalette.setColors();
-		colorPalette.setCustomProperties();
-
-		orbs.forEach((orb) => {
-			orb.fill = colorPalette.randomColor();
-		});
-	});
-
-// Resume Button
-var animateButton = function (e) {
-
-	e.preventDefault;
-	//reset animation
-	e.target.classList.remove('animate');
-
-	e.target.classList.add('animate');
-	setTimeout(function () {
-		e.target.classList.remove('animate');
-	}, 700);
-};
-
-var buttons = document.getElementsByClassName("button");
-
-for (var i = 0; i < buttons.length; i++) {
-	buttons[i].addEventListener('click', animateButton, false);
+const buttons = document.getElementsByTagName("button");
+for (const button of buttons) {
+	button.addEventListener("click", createRipple);
 }
