@@ -205,4 +205,13 @@ i {
 	#row {
 		width: 300px;
 	}
+
+	#background {
+		display: none;
+	}
+
+	body {
+		background: #111;
+		overflow: auto;
+	}
 }
